@@ -110,12 +110,12 @@
         .btn-inspector.no-name .avatar { background: rgba(246,165,74,.18); color: var(--amber); }
  
         /* ---------- 본문 ---------- */
-        main { flex: 1; overflow-y: auto; padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; }
+        main { flex: 1; overflow-y: auto; padding: 10px 16px 10px; display: flex; flex-direction: column; gap: 10px; -webkit-overflow-scrolling: touch; }
  
         /* 스캐너 */
         .scanner {
             position: relative;
-            height: 272px;
+            height: 244px;
             flex-shrink: 0;
             border-radius: var(--radius-lg);
             overflow: hidden;
@@ -149,7 +149,7 @@
         .scanner.is-live .scan-hint { display: block; }
  
         .camera-fallback { display: none; position: relative; flex-direction: column; align-items: center; text-align: center; gap: 9px; padding: 22px 18px; }
-        .scanner.no-camera { height: auto; min-height: 272px; }
+        .scanner.no-camera { height: auto; min-height: 244px; }
         .scanner.no-camera video { display: none; }
         .scanner.no-camera .camera-fallback { display: flex; }
         .camera-fallback .warn { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; background: rgba(246,165,74,.14); color: var(--amber); font-weight: 900; font-size: 1.2rem; }
@@ -169,28 +169,36 @@
         .btn-danger { min-height: 56px; font-size: 1.02rem; color: #fff; background: #d9475a; }
         .btn svg { width: 22px; height: 22px; flex-shrink: 0; }
  
-        .action-row { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .action-row { display: grid; grid-template-columns: 1fr; gap: 8px; }
+        #btn-toggle-scan { min-height: 50px; font-size: 1.06rem; }
  
         /* 요약 */
         .summary { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); }
-        .summary > div { padding: 13px 10px 12px; text-align: center; }
+        .summary > div { padding: 7px 8px 6px; text-align: center; display: flex; align-items: baseline; justify-content: center; gap: 6px; }
         .summary > div + div { border-left: 1px solid var(--line); }
-        .summary .label { display: block; font-size: .72rem; color: var(--muted); margin-bottom: 4px; }
-        .summary .value { font-size: 1.28rem; font-weight: 800; letter-spacing: -0.02em; }
+        .summary .label { font-size: .72rem; color: var(--muted); }
+        .summary .value { font-size: 1.12rem; font-weight: 800; letter-spacing: -0.02em; }
         .summary .value small { font-size: .74rem; color: var(--muted); font-weight: 600; margin-left: 2px; }
-        .summary .state { font-size: .8rem; font-weight: 800; line-height: 1.9; }
+        .summary .state { font-size: .82rem; font-weight: 800; }
  
         /* 목록 */
-        .list-head { display: flex; align-items: baseline; justify-content: space-between; margin-top: 4px; padding: 0 2px; }
+        .list-head { display: flex; align-items: baseline; justify-content: space-between; margin-top: 2px; padding: 0 2px; flex-shrink: 0; }
         .list-head h2 { font-size: 1rem; font-weight: 800; }
         .list-head span { font-size: .76rem; color: var(--muted); }
  
-        .list { display: flex; flex-direction: column; gap: 10px; }
+        .list { display: flex; flex-direction: column; gap: 8px; flex: 1 0 auto; }
+        .list .empty { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        /* 화면이 충분히 긴 폰: 위쪽은 고정, 목록만 스크롤 → 목록이 하단 버튼까지 꽉 차게 */
+        @media (min-height: 700px) {
+            main { overflow: hidden; }
+            .list { flex: 1 1 0; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+            .scanner, .action-row, .summary { flex-shrink: 0; }
+        }
         .item {
             display: grid;
             grid-template-columns: 1fr auto;
-            gap: 10px 12px;
-            padding: 15px 15px 13px;
+            gap: 8px 12px;
+            padding: 12px 14px 10px;
             border-radius: var(--radius-md);
             background: var(--surface);
             border: 1px solid var(--line);
@@ -208,16 +216,16 @@
         .tag b { color: var(--text); font-weight: 700; }
         .tag.warn { background: rgba(246,165,74,.14); color: var(--amber); }
         .tag.expired { background: rgba(255,107,122,.14); color: var(--danger); }
-        .item-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
-        .item-actions button { min-height: 40px; border-radius: 10px; font-size: .86rem; font-weight: 700; background: var(--surface-2); color: var(--text); border: none; }
+        .item-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+        .item-actions button { min-height: 36px; border-radius: 10px; font-size: .86rem; font-weight: 700; background: var(--surface-2); color: var(--text); border: none; }
         .item-actions .btn-delete { color: var(--danger); }
  
         .empty { text-align: center; padding: 34px 20px; border: 1px dashed var(--line-strong); border-radius: var(--radius-md); color: var(--muted); font-size: .86rem; line-height: 1.7; word-break: keep-all; }
         .empty strong { display: block; color: var(--text); font-size: .98rem; margin-bottom: 4px; }
  
         /* 하단 전송 바 */
-        footer { padding: 8px 16px max(8px, calc(env(safe-area-inset-bottom, 0px) - 16px)); background: rgba(19, 17, 28, .92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-top: 1px solid var(--line); }
-        .btn-send { min-height: 54px; font-size: 1.08rem; color: #fff; background: var(--brand); box-shadow: 0 10px 28px rgba(178, 79, 192, .3); }
+        footer { padding: 6px 16px max(6px, calc(env(safe-area-inset-bottom, 0px) - 24px)); background: rgba(19, 17, 28, .92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-top: 1px solid var(--line); }
+        .btn-send { min-height: 52px; font-size: 1.08rem; color: #fff; background: var(--brand); box-shadow: 0 10px 28px rgba(178, 79, 192, .3); }
         .btn-send .count { min-width: 26px; height: 26px; padding: 0 8px; border-radius: 999px; background: rgba(255,255,255,.22); font-size: .86rem; display: inline-grid; place-items: center; }
         .btn-send.is-empty { background: var(--surface-2); color: var(--muted); box-shadow: none; }
         .btn-send.is-empty .count { background: var(--surface-3); }
