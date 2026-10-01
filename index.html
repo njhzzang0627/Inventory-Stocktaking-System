@@ -173,10 +173,10 @@
         #btn-toggle-scan { min-height: 50px; font-size: 1.06rem; }
  
         /* 요약 */
-        .summary { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); }
-        .summary > div { padding: 7px 8px 6px; text-align: center; display: flex; align-items: baseline; justify-content: center; gap: 6px; }
+        .summary { display: grid; grid-template-columns: 0.85fr 1.45fr 0.7fr; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); }
+        .summary > div { padding: 7px 4px 6px; text-align: center; display: flex; align-items: baseline; justify-content: center; gap: 6px; }
         .summary > div + div { border-left: 1px solid var(--line); }
-        .summary .label { font-size: .72rem; color: var(--muted); }
+        .summary .label { font-size: .72rem; color: var(--muted); white-space: nowrap; }
         .summary .value { font-size: 1.12rem; font-weight: 800; letter-spacing: -0.02em; }
         .summary .value small { font-size: .74rem; color: var(--muted); font-weight: 600; margin-left: 2px; }
         .summary .state { font-size: .82rem; font-weight: 800; }
@@ -212,8 +212,11 @@
         .code-chip.unknown { background: rgba(246,165,74,.15); color: var(--amber); }
         .tag.box { background: rgba(138,90,214,.18); color: #cdb6ff; font-weight: 700; }
         .item-qty { text-align: right; cursor: pointer; }
-        .item-qty strong { display: block; font-size: 1.6rem; font-weight: 900; line-height: 1; letter-spacing: -0.03em; }
-        .item-qty span { font-size: .7rem; color: var(--muted); }
+        .item-qty { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+        .item-qty .q { display: flex; align-items: baseline; gap: 4px; line-height: 1; }
+        .item-qty .q strong { font-size: 1.35rem; font-weight: 900; letter-spacing: -0.03em; }
+        .item-qty .q span { font-size: .68rem; font-weight: 800; color: var(--muted); width: 26px; text-align: left; }
+        .item-qty .q.zero strong { color: var(--faint); }
         .item-meta { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
         .tag { display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; border-radius: 8px; background: var(--surface-2); font-size: .76rem; color: var(--muted); }
         .tag b { color: var(--text); font-weight: 700; }
@@ -273,9 +276,16 @@
         .with-action .btn-ocr { position: absolute; right: 6px; top: 6px; width: 44px; height: 40px; border-radius: 10px; border: none; background: var(--surface-2); color: var(--text); display: grid; place-items: center; }
         .with-action .btn-ocr svg { width: 20px; height: 20px; }
  
-        .stepper { display: grid; grid-template-columns: 64px 1fr 64px; gap: 8px; }
-        .stepper button { height: 64px; border-radius: var(--radius-sm); border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--text); font-size: 1.6rem; font-weight: 500; }
-        .stepper input { height: 64px; text-align: center; font-size: 1.9rem; font-weight: 900; letter-spacing: -0.03em; border-color: rgba(138,90,214,.6); }
+        .qty-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .qty-box { background: var(--ink); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 9px 8px 8px; }
+        .qty-unit { display: block; text-align: center; font-size: .86rem; font-weight: 900; letter-spacing: .04em; color: #cdb6ff; margin-bottom: 7px; }
+        .qty-unit small { font-size: .72rem; font-weight: 700; color: var(--muted); letter-spacing: 0; margin-left: 2px; }
+        .qty-total { font-size: .78rem; color: var(--mint); font-weight: 700; }
+        .stepper { display: grid; grid-template-columns: 44px 1fr 44px; gap: 5px; }
+        .stepper button { height: 56px; border-radius: 11px; border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--text); font-size: 1.45rem; font-weight: 500; padding: 0; }
+        .field .stepper input { height: 56px; padding: 0 2px; text-align: center; font-size: 1.6rem; font-weight: 900; letter-spacing: -0.03em; border-color: rgba(138,90,214,.6); }
+        .summary .value.qty-sum { font-size: 1rem; white-space: nowrap; }
+        .summary .value.qty-sum small { margin-right: 2px; font-size: .64rem; }
  
         .sheet-actions { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; margin-top: 18px; }
         .sheet-actions .btn { min-height: 56px; }
@@ -387,9 +397,9 @@
         </div>
  
         <div class="summary">
-            <div><span class="label">전송 대기</span><span class="value"><span id="total-count">0</span><small>건</small></span></div>
-            <div><span class="label">총 수량</span><span class="value"><span id="total-qty">0</span><small>개</small></span></div>
-            <div><span class="label">상태</span><span id="sync-state" class="state">확인 중</span></div>
+            <div><span class="label">대기</span><span class="value"><span id="total-count">0</span><small>건</small></span></div>
+            <div><span class="label">수량</span><span class="value qty-sum"><span id="total-box">0</span><small>BOX</small> <span id="total-ea">0</span><small>EA</small></span></div>
+            <div><span id="sync-state" class="state">확인 중</span></div>
         </div>
  
         <div class="list-head">
@@ -427,11 +437,24 @@
                 <input type="text" id="input-name" autocomplete="off" placeholder="제품명">
             </div>
             <div class="field" id="field-qty">
-                <span class="label">실사 수량</span>
-                <div class="stepper">
-                    <button type="button" id="qty-minus" aria-label="수량 줄이기">−</button>
-                    <input type="number" id="input-qty" inputmode="numeric" pattern="[0-9]*" placeholder="0" min="0">
-                    <button type="button" id="qty-plus" aria-label="수량 늘리기">+</button>
+                <span class="label"><span>실사 수량</span><span id="qty-total" class="qty-total"></span></span>
+                <div class="qty-pair">
+                    <div class="qty-box">
+                        <span class="qty-unit">BOX</span>
+                        <div class="stepper">
+                            <button type="button" data-step="-1" data-target="input-box" aria-label="BOX 줄이기">−</button>
+                            <input type="number" id="input-box" inputmode="numeric" pattern="[0-9]*" placeholder="0" min="0">
+                            <button type="button" data-step="1" data-target="input-box" aria-label="BOX 늘리기">+</button>
+                        </div>
+                    </div>
+                    <div class="qty-box">
+                        <span class="qty-unit">EA <small>낱개</small></span>
+                        <div class="stepper">
+                            <button type="button" data-step="-1" data-target="input-ea" aria-label="낱개 줄이기">−</button>
+                            <input type="number" id="input-ea" inputmode="numeric" pattern="[0-9]*" placeholder="0" min="0">
+                            <button type="button" data-step="1" data-target="input-ea" aria-label="낱개 늘리기">+</button>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="field-row">
@@ -546,7 +569,8 @@
         const modalBarcode = $('modal-barcode');
         const inputBarcode = $('input-barcode');
         const inputName = $('input-name');
-        const inputQty = $('input-qty');
+        const inputBox = $('input-box');
+        const inputEa = $('input-ea');
         const inputExp = $('input-exp');
         const inputUse = $('input-use');
         const btnSave = $('btn-save');
@@ -807,8 +831,40 @@
         // ------------------------------------------------------------------
         // 수량 스테퍼
         // ------------------------------------------------------------------
-        $('qty-minus').addEventListener('click', () => { inputQty.value = Math.max(0, (parseInt(inputQty.value, 10) || 0) - 1); vibrate(15); });
-        $('qty-plus').addEventListener('click', () => { inputQty.value = (parseInt(inputQty.value, 10) || 0) + 1; vibrate(15); });
+        const toInt = (v) => Math.max(0, parseInt(v, 10) || 0);
+        document.querySelectorAll('.stepper button[data-step]').forEach(btn => btn.addEventListener('click', () => {
+            const el = $(btn.dataset.target);
+            el.value = Math.max(0, toInt(el.value) + Number(btn.dataset.step));
+            vibrate(15);
+            updateQtyTotal();
+        }));
+        [inputBox, inputEa].forEach(el => el.addEventListener('input', updateQtyTotal));
+ 
+        // 입수가 있는 마스터 제품이면 총 낱개 수량을 함께 보여줌
+        function updateQtyTotal() {
+            const box = toInt(inputBox.value), ea = toInt(inputEa.value);
+            const per = currentProduct && Number(currentProduct.perBox);
+            $('qty-total').innerText = (per && (box || ea)) ? `입수 ${per} · 총 ${(box * per + ea).toLocaleString('ko-KR')} EA` : (per ? `입수 ${per}` : '');
+        }
+ 
+        // 이전 버전(수량 1칸) 데이터 → BOX/EA로 변환
+        function normalizeQty(item) {
+            if (item.box == null && item.ea == null) {
+                const q = Number(item.qty) || 0;
+                if (item.barcodeType === '박스') { item.box = q; item.ea = 0; } else { item.box = 0; item.ea = q; }
+            }
+            item.box = Number(item.box) || 0;
+            item.ea = Number(item.ea) || 0;
+            delete item.qty;
+            return item;
+        }
+ 
+        function qtyText(item) {
+            const parts = [];
+            if (item.box) parts.push(`${item.box} BOX`);
+            if (item.ea) parts.push(`${item.ea} EA`);
+            return parts.join(' · ') || '0';
+        }
  
         // ------------------------------------------------------------------
         // 재고실사자
@@ -1064,7 +1120,8 @@
                 modalBarcode.innerHTML = productInfoHtml(currentProduct, item.barcode) + ' · 전송 전까지 수정 가능';
                 inputBarcode.value = item.barcode;
                 inputName.value = item.name;
-                inputQty.value = item.qty;
+                inputBox.value = item.box || '';
+                inputEa.value = item.ea || '';
                 inputExp.value = item.expDate === '-' ? '' : item.expDate;
                 inputUse.value = item.useDate === '-' ? '' : item.useDate;
                 btnSave.innerText = '수정 완료';
@@ -1079,19 +1136,23 @@
                 }
                 inputBarcode.value = barcode;
                 inputName.value = currentProduct ? currentProduct.name : '';
-                inputQty.value = '';
+                inputBox.value = '';
+                inputEa.value = '';
                 inputExp.value = '';
                 inputUse.value = '';
                 btnSave.innerText = '목록에 추가';
             }
             modalOverlay.style.display = 'flex';
-            setTimeout(() => (mode === 'manual' ? inputBarcode : inputQty).focus(), 200);
+            updateQtyTotal();
+            const qtyFocus = currentProduct && currentProduct.type === '박스' ? inputBox : inputEa;
+            setTimeout(() => (mode === 'manual' ? inputBarcode : qtyFocus).focus(), 200);
         }
  
         // 마스터 제품 정보를 등록 시트에 반영
         function applyProduct(p, code) {
             const prev = currentProduct;
             currentProduct = p;
+            setTimeout(updateQtyTotal, 0);
             if (p) {
                 if (!editingId) modalItemName.innerText = p.name;
                 modalBarcode.innerHTML = productInfoHtml(p, code);
@@ -1143,15 +1204,16 @@
  
         btnSave.addEventListener('click', () => {
             const barcode = inputBarcode.value.trim();
-            const qty = parseInt(inputQty.value, 10);
+            const box = toInt(inputBox.value);
+            const ea = toInt(inputEa.value);
             if (!/^\d{8,20}$/.test(barcode)) {
                 markInvalid('field-barcode', inputBarcode);
                 showNotice('바코드를 확인해 주세요', '8~20자리 숫자로 입력해 주세요.');
                 return;
             }
-            if (isNaN(qty) || qty <= 0) {
-                markInvalid('field-qty', inputQty);
-                showNotice('수량을 입력해 주세요', '1 이상의 숫자를 입력하거나 + 버튼을 눌러 주세요.');
+            if (box + ea <= 0) {
+                markInvalid('field-qty', currentProduct && currentProduct.type === '박스' ? inputBox : inputEa);
+                showNotice('수량을 입력해 주세요', 'BOX 또는 EA(낱개) 중 하나 이상 입력해 주세요.');
                 return;
             }
             const fields = {
@@ -1159,7 +1221,8 @@
                 name: (inputName.value.trim() && inputName.value.trim() !== '미등록 제품') ? inputName.value.trim() : ((lookupProduct(barcode) || {}).name || '미등록 제품'),
                 code: (lookupProduct(barcode) || {}).code || '',
                 barcodeType: (lookupProduct(barcode) || {}).type || '',
-                qty,
+                box,
+                ea,
                 expDate: normalizeDate(inputExp.value) || '-',
                 useDate: normalizeDate(inputUse.value) || '-'
             };
@@ -1167,7 +1230,7 @@
             if (editingId) {
                 const item = scanDataList.find(r => r.id === editingId);
                 if (item) Object.assign(item, fields);
-                showNotice('수정 완료', `${fields.name} · ${fields.qty}개`, 'success', 2000);
+                showNotice('수정 완료', `${fields.name} · ${qtyText(fields)}`, 'success', 2000);
             } else {
                 scanDataList.unshift({
                     id: String(Date.now()) + String(Math.floor(Math.random() * 90 + 10)),
@@ -1175,7 +1238,7 @@
                     ...fields
                 });
                 vibrate(30);
-                showNotice('목록에 추가됨', `${fields.name} ${fields.qty}개`, 'success', 1800);
+                showNotice('목록에 추가됨', `${fields.name} · ${qtyText(fields)}`, 'success', 1800);
             }
             saveLocal();
             renderList();
@@ -1358,7 +1421,7 @@
         // ------------------------------------------------------------------
         function loadLocal() {
             if (!currentInspector) return [];
-            try { return JSON.parse(localStorage.getItem(STORE_KEY + '::' + currentInspector) || '[]'); } catch { return []; }
+            try { return JSON.parse(localStorage.getItem(STORE_KEY + '::' + currentInspector) || '[]').map(normalizeQty); } catch { return []; }
         }
         function saveLocal() {
             if (!currentInspector) return;
@@ -1382,9 +1445,11 @@
         function refreshStatus() {
             $('brand-sub').innerText = masterCount ? `대상(주) 물류 · 마스터 ${masterCount.toLocaleString('ko-KR')}건` : '대상(주) 물류 · 마스터 없음';
             const count = scanDataList.length;
-            const totalQty = scanDataList.reduce((s, r) => s + (Number(r.qty) || 0), 0);
+            const totalBox = scanDataList.reduce((s, r) => s + (Number(r.box) || 0), 0);
+            const totalEa = scanDataList.reduce((s, r) => s + (Number(r.ea) || 0), 0);
             $('total-count').innerText = count;
-            $('total-qty').innerText = totalQty.toLocaleString('ko-KR');
+            $('total-box').innerText = totalBox.toLocaleString('ko-KR');
+            $('total-ea').innerText = totalEa.toLocaleString('ko-KR');
             $('send-count').innerText = count;
             btnSend.classList.toggle('is-empty', count === 0);
  
@@ -1411,8 +1476,8 @@
                         <div class="item-code">${item.code ? `<span class="code-chip">${escapeHtml(item.code)}</span>` : '<span class="code-chip unknown">미등록</span>'} ${escapeHtml(item.barcode)} · ${escapeHtml(formatTime(item.scannedAt))}</div>
                     </div>
                     <div class="item-qty" data-action="edit">
-                        <strong>${escapeHtml(item.qty)}</strong>
-                        <span>수량</span>
+                        <div class="q ${item.box ? '' : 'zero'}"><strong>${escapeHtml(item.box || 0)}</strong><span>BOX</span></div>
+                        <div class="q ${item.ea ? '' : 'zero'}"><strong>${escapeHtml(item.ea || 0)}</strong><span>EA</span></div>
                     </div>
                     <div class="item-meta">
                         ${item.barcodeType === '박스' ? '<span class="tag box">박스</span>' : ''}
@@ -1437,7 +1502,7 @@
             if (actionEl.dataset.action === 'delete') {
                 const ok = await askConfirm({
                     title: '이 기록을 삭제할까요?',
-                    rows: [['제품', item.name], ['바코드', item.barcode], ['수량', item.qty + '개']],
+                    rows: [['제품', item.name], ['바코드', item.barcode], ['수량', qtyText(item)]],
                     confirmText: '삭제',
                     danger: true
                 });
@@ -1484,11 +1549,12 @@
                 showNotice('구글 시트 연결 설정 필요', '관리자에게 시트 연결 설정을 요청해 주세요. 데이터는 휴대폰에 그대로 보관됩니다.');
                 return;
             }
-            const totalQty = scanDataList.reduce((s, r) => s + (Number(r.qty) || 0), 0);
+            const sumBox = scanDataList.reduce((s, r) => s + (Number(r.box) || 0), 0);
+            const sumEa = scanDataList.reduce((s, r) => s + (Number(r.ea) || 0), 0);
             const ok = await askConfirm({
                 title: '대시보드로 전송할까요?',
                 message: '전송 후에는 이 화면에서 조회·수정할 수 없어요.',
-                rows: [['재고실사자', inspector], ['전송 건수', scanDataList.length + '건'], ['총 수량', totalQty.toLocaleString('ko-KR') + '개']],
+                rows: [['재고실사자', inspector], ['전송 건수', scanDataList.length + '건'], ['총 BOX', sumBox.toLocaleString('ko-KR') + ' BOX'], ['총 낱개', sumEa.toLocaleString('ko-KR') + ' EA']],
                 confirmText: '전송하기'
             });
             if (!ok) return;
@@ -1508,7 +1574,8 @@
                             scannedAt: item.scannedAt,
                             barcode: item.barcode,
                             productName: item.name,
-                            quantity: item.qty,
+                            boxQty: item.box || 0,
+                            eaQty: item.ea || 0,
                             manufactureDate: item.expDate === '-' ? '' : item.expDate,
                             expiryDate: item.useDate === '-' ? '' : item.useDate,
                             productCode: item.code || '',
