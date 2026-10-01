@@ -207,7 +207,10 @@
         @keyframes itemIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
         .item-main { min-width: 0; cursor: pointer; }
         .item-name { font-size: 1rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .item-code { font-size: .78rem; color: var(--muted); margin-top: 3px; }
+        .item-code { font-size: .78rem; color: var(--muted); margin-top: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .code-chip { display: inline-block; padding: 2px 7px; border-radius: 6px; background: rgba(138,90,214,.18); color: #cdb6ff; font-size: .74rem; font-weight: 800; letter-spacing: .01em; }
+        .code-chip.unknown { background: rgba(246,165,74,.15); color: var(--amber); }
+        .tag.box { background: rgba(138,90,214,.18); color: #cdb6ff; font-weight: 700; }
         .item-qty { text-align: right; cursor: pointer; }
         .item-qty strong { display: block; font-size: 1.6rem; font-weight: 900; line-height: 1; letter-spacing: -0.03em; }
         .item-qty span { font-size: .7rem; color: var(--muted); }
@@ -496,13 +499,10 @@
         const AUTOSTART_KEY = 'ds_autostart_scan';
         const EXPIRY_WARN_DAYS = 30;                   // 소비기한 임박 표시 기준(일)
  
-        const productMaster = {
-            "8801045291234": "오뚜기 진라면 매운맛 120g",
-            "18801056123456": "코카콜라 500ml PET (박스)",
-            "8801007012345": "CJ 햇반 210g",
-            "18801037098765": "서울우유 1L (박스)",
-            "8801043011111": "농심 신라면 5입"
-        };
+        const MASTER_KEY = 'ds_master_cache_v1';        // 자재 마스터 (구글 시트 '마스터' 시트에서 받아옴)
+        let masterMap = new Map();
+        let masterCount = 0;
+        let currentProduct = null;                      // 등록 시트에 표시 중인 마스터 제품
  
         let scanDataList = [];
         let isScanning = false;
@@ -569,6 +569,65 @@
             f.classList.remove('invalid'); void f.offsetWidth; f.classList.add('invalid');
             setTimeout(() => f.classList.remove('invalid'), 1200);
             if (focusEl) focusEl.focus();
+        }
+ 
+        // ------------------------------------------------------------------
+        // 자재 마스터: 제품바코드(C열)·박스바코드(D열) 모두로 제품코드/제품명 조회
+        // ------------------------------------------------------------------
+        function barcodeKey(b) {
+            return String(b || '').replace(/\D/g, '').replace(/^0+/, '');
+        }
+ 
+        function buildMaster(items) {
+            masterMap = new Map();
+            (items || []).forEach(it => {
+                if (it.unitBarcode) masterMap.set(barcodeKey(it.unitBarcode), { ...it, type: '낱개' });
+                if (it.boxBarcode) masterMap.set(barcodeKey(it.boxBarcode), { ...it, type: '박스' });
+            });
+            masterCount = (items || []).length;
+        }
+ 
+        function lookupProduct(barcode) {
+            const k = barcodeKey(barcode);
+            return k ? (masterMap.get(k) || null) : null;
+        }
+ 
+        // 전송 전 목록 중 '미등록 제품'이었던 항목을 최신 마스터로 채움
+        function backfillFromMaster() {
+            let changed = false;
+            scanDataList.forEach(item => {
+                const p = lookupProduct(item.barcode);
+                if (!p) return;
+                if (!item.code) { item.code = p.code; changed = true; }
+                if (!item.barcodeType) { item.barcodeType = p.type; changed = true; }
+                if (!item.name || item.name === '미등록 제품') { item.name = p.name; changed = true; }
+            });
+            if (changed) { saveLocal(); renderList(); }
+        }
+ 
+        async function loadMaster() {
+            try {
+                const cached = JSON.parse(localStorage.getItem(MASTER_KEY) || 'null');
+                if (cached && cached.items) buildMaster(cached.items);
+            } catch {}
+            if (!SHEET_API_URL) return;
+            try {
+                const res = await fetch(`${SHEET_API_URL}?action=master`);
+                const data = await res.json();
+                if (!data.ok) throw new Error(data.error);
+                buildMaster(data.items);
+                try { localStorage.setItem(MASTER_KEY, JSON.stringify({ items: data.items, updatedAt: data.updatedAt })); } catch {}
+                backfillFromMaster();
+            } catch (e) {
+                if (!masterCount) showNotice('자재 마스터를 불러오지 못했어요', '인터넷 연결을 확인해 주세요. 스캔은 가능하지만 제품명이 \'미등록 제품\'으로 표시됩니다.');
+            }
+            refreshStatus();
+        }
+ 
+        function productInfoHtml(p, barcode) {
+            if (!p) return `<span class="code-chip unknown">미등록</span> 바코드 ${escapeHtml(barcode)}`;
+            const box = p.type === '박스' ? `박스 바코드${p.perBox ? ` · 입수 ${escapeHtml(p.perBox)}` : ''}` : '제품 바코드';
+            return `<span class="code-chip">${escapeHtml(p.code)}</span> ${box}`;
         }
  
         // 확인 시트 (native confirm 대체)
@@ -903,8 +962,9 @@
             editingId = mode === 'edit' ? item.id : null;
             resumeScanAfterModal = mode === 'scan';
             if (mode === 'edit') {
+                currentProduct = lookupProduct(item.barcode);
                 modalItemName.innerText = '실사 내역 수정';
-                modalBarcode.innerText = '전송 전까지 자유롭게 수정할 수 있어요';
+                modalBarcode.innerHTML = productInfoHtml(currentProduct, item.barcode) + ' · 전송 전까지 수정 가능';
                 inputBarcode.value = item.barcode;
                 inputName.value = item.name;
                 inputQty.value = item.qty;
@@ -912,10 +972,16 @@
                 inputUse.value = item.useDate === '-' ? '' : item.useDate;
                 btnSave.innerText = '수정 완료';
             } else {
-                modalItemName.innerText = mode === 'scan' ? (productMaster[barcode] || '미등록 제품') : '바코드 직접 입력';
-                modalBarcode.innerText = mode === 'scan' ? '바코드 ' + barcode : '바코드 숫자를 입력해 주세요';
+                currentProduct = mode === 'scan' ? lookupProduct(barcode) : null;
+                if (mode === 'scan') {
+                    modalItemName.innerText = currentProduct ? currentProduct.name : '미등록 제품';
+                    modalBarcode.innerHTML = productInfoHtml(currentProduct, barcode);
+                } else {
+                    modalItemName.innerText = '바코드 직접 입력';
+                    modalBarcode.innerText = '바코드 숫자를 입력해 주세요';
+                }
                 inputBarcode.value = barcode;
-                inputName.value = productMaster[barcode] || '';
+                inputName.value = currentProduct ? currentProduct.name : '';
                 inputQty.value = '';
                 inputExp.value = '';
                 inputUse.value = '';
@@ -925,9 +991,20 @@
             setTimeout(() => (mode === 'manual' ? inputBarcode : inputQty).focus(), 200);
         }
  
+        // 바코드를 직접 입력·수정하면 마스터에서 바로 찾아 표시
         inputBarcode.addEventListener('input', () => {
-            const name = productMaster[inputBarcode.value.trim()];
-            if (name && !inputName.value.trim()) inputName.value = name;
+            const code = inputBarcode.value.trim();
+            const prev = currentProduct;
+            currentProduct = lookupProduct(code);
+            if (currentProduct) {
+                if (!editingId) modalItemName.innerText = currentProduct.name;
+                modalBarcode.innerHTML = productInfoHtml(currentProduct, code);
+                if (!inputName.value.trim() || inputName.value === '미등록 제품' || (prev && inputName.value === prev.name)) inputName.value = currentProduct.name;
+            } else if (/^\d{8,20}$/.test(code)) {
+                if (!editingId) modalItemName.innerText = '미등록 제품';
+                modalBarcode.innerHTML = productInfoHtml(null, code);
+                if (prev && inputName.value === prev.name) inputName.value = '';
+            }
         });
  
         btnManual.addEventListener('click', () => {
@@ -960,7 +1037,9 @@
             }
             const fields = {
                 barcode,
-                name: inputName.value.trim() || productMaster[barcode] || '미등록 제품',
+                name: inputName.value.trim() || (lookupProduct(barcode) || {}).name || '미등록 제품',
+                code: (lookupProduct(barcode) || {}).code || '',
+                barcodeType: (lookupProduct(barcode) || {}).type || '',
                 qty,
                 expDate: normalizeDate(inputExp.value) || '-',
                 useDate: normalizeDate(inputUse.value) || '-'
@@ -1207,13 +1286,14 @@
                 <article class="item" data-record-id="${escapeHtml(item.id)}">
                     <div class="item-main" data-action="edit">
                         <div class="item-name">${escapeHtml(item.name)}</div>
-                        <div class="item-code">${escapeHtml(item.barcode)} · ${escapeHtml(formatTime(item.scannedAt))}</div>
+                        <div class="item-code">${item.code ? `<span class="code-chip">${escapeHtml(item.code)}</span>` : '<span class="code-chip unknown">미등록</span>'} ${escapeHtml(item.barcode)} · ${escapeHtml(formatTime(item.scannedAt))}</div>
                     </div>
                     <div class="item-qty" data-action="edit">
                         <strong>${escapeHtml(item.qty)}</strong>
                         <span>수량</span>
                     </div>
                     <div class="item-meta">
+                        ${item.barcodeType === '박스' ? '<span class="tag box">박스</span>' : ''}
                         <span class="tag">제조 <b>${escapeHtml(item.expDate)}</b></span>
                         ${expiryTag(item.useDate)}
                     </div>
@@ -1308,7 +1388,9 @@
                             productName: item.name,
                             quantity: item.qty,
                             manufactureDate: item.expDate === '-' ? '' : item.expDate,
-                            expiryDate: item.useDate === '-' ? '' : item.useDate
+                            expiryDate: item.useDate === '-' ? '' : item.useDate,
+                            productCode: item.code || '',
+                            barcodeType: item.barcodeType || ''
                         }))
                     });
                     const sentIds = new Set(chunk.map(r => r.id));
@@ -1336,6 +1418,8 @@
         scanDataList = loadLocal();
         renderInspector();
         renderList();
+        loadMaster();
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) loadMaster(); });
  
         try {
             if (sessionStorage.getItem(AUTOSTART_KEY)) {
